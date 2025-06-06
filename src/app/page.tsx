@@ -1,95 +1,81 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+
+import { useState } from 'react';
+import ContactForm from '@/components/ContactForm';
+import ConfirmationPage from '@/components/ConfirmationPage';
+import CompletionPage from '@/components/CompletionPage';
+import { saveContactForm } from '@/lib/firestore';
+
+export type FormData = {
+  name: string;
+  email: string;
+  service: string;
+  category: string;
+  plans: string[];
+  message: string;
+};
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [step, setStep] = useState<'form' | 'confirm' | 'complete'>('form');
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    email: '',
+    service: '',
+    category: '',
+    plans: [],
+    message: '',
+  });
+  const [error, setError] = useState<string>('');
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  const handleFormSubmit = (data: FormData) => {
+    setFormData(data);
+    setStep('confirm');
+  };
+
+  const handleConfirm = async () => {
+    try {
+      await saveContactForm(formData);
+      setStep('complete');
+    } catch (error) {
+      setError('送信に失敗しました。もう一度お試しください。');
+      console.error('Error submitting form:', error);
+    }
+  };
+
+  const handleBack = () => {
+    setStep('form');
+    setError('');
+  };
+
+  const handleReturnToForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      service: '',
+      category: '',
+      plans: [],
+      message: '',
+    });
+    setStep('form');
+    setError('');
+  };
+
+  return (
+    <main className="container">
+      {error && <div className="error-message">{error}</div>}
+      {step === 'form' && (
+        <ContactForm onSubmit={handleFormSubmit} initialData={formData} />
+      )}
+      {step === 'confirm' && (
+        <ConfirmationPage
+          formData={formData}
+          onConfirm={handleConfirm}
+          onBack={handleBack}
+        />
+      )}
+      {step === 'complete' && (
+        <CompletionPage onReturn={handleReturnToForm} />
+      )}
+    </main>
   );
 }
