@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, query, orderBy, Firestore } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore';
 import { getDb } from './firebase';
 import type { FormData } from '@/app/page';
 

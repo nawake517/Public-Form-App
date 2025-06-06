@@ -15,6 +15,15 @@ export type FormData = {
   message: string;
 };
 
+export type FormErrors = {
+  name?: string;
+  email?: string;
+  service?: string;
+  category?: string;
+  plans?: string;
+  message?: string;
+};
+
 export default function Home() {
   const [step, setStep] = useState<'form' | 'confirm' | 'complete'>('form');
   const [formData, setFormData] = useState<FormData>({

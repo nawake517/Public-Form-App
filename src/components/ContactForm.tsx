@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { FormData } from '@/app/page';
+import type { FormData, FormErrors } from '@/app/page';
 
 interface ContactFormProps {
   onSubmit: (data: FormData) => void;
@@ -10,10 +10,10 @@ interface ContactFormProps {
 
 export default function ContactForm({ onSubmit, initialData }: ContactFormProps) {
   const [formData, setFormData] = useState<FormData>(initialData);
-  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const validateForm = () => {
-    const newErrors: Partial<FormData> = {};
+    const newErrors: FormErrors = {};
 
     if (!formData.name.trim()) {
       newErrors.name = '氏名は必須項目です';
