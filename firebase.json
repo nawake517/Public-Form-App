@@ -8,9 +8,6 @@
     ],
     "frameworksBackend": {
       "region": "asia-east1"
-    },
-    "env": {
-      "GOOGLE_CLOUD_PROJECT": "${PROJECT_ID}"
     }
   }
 } 
