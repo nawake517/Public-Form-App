@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
+// デフォルトの認証情報を使用してクライアントを初期化
 const client = new SecretManagerServiceClient();
 
 async function getSecret(secretName: string): Promise<string> {
@@ -13,36 +14,23 @@ async function getSecret(secretName: string): Promise<string> {
   }
 
   try {
+    // App Hostingの環境変数を使用
     const projectId = process.env.GOOGLE_CLOUD_PROJECT;
     if (!projectId) {
-      throw new Error('GOOGLE_CLOUD_PROJECT environment variable is not set');
+      throw new Error('Project ID is not available in the environment');
     }
-    console.error('Debug - Project ID:', projectId); // デバッグ用
 
     const name = `projects/${projectId}/secrets/${secretName}/versions/latest`;
-    console.error('Debug - Accessing secret:', secretName); // デバッグ用（シークレット名のみログ出力）
-
-    try {
-      const [version] = await client.accessSecretVersion({ name });
-      if (!version.payload?.data) {
-        throw new Error(`No data found for secret: ${secretName}`);
-      }
-      return version.payload.data.toString();
-    } catch (secretError) {
-      console.error('Debug - Secret Manager Error:', secretError instanceof Error ? secretError.message : 'Unknown error');
-      throw new Error(`Failed to access secret ${secretName}: ${secretError instanceof Error ? secretError.message : 'Unknown error'}`);
-    }
+    const [version] = await client.accessSecretVersion({ name });
+    return version.payload?.data?.toString() || '';
   } catch (error) {
-    console.error('Debug - Error in getSecret:', error instanceof Error ? error.message : 'Unknown error');
-    throw error;
+    console.error('Error accessing secret:', error);
+    throw new Error(`Failed to access secret: ${secretName}`);
   }
 }
 
 export async function GET() {
   try {
-    console.error('Debug - Starting config retrieval'); // デバッグ用
-    console.error('Debug - Environment:', process.env.NODE_ENV); // デバッグ用
-
     const config = {
       apiKey: await getSecret('NEXT_PUBLIC_FIREBASE_API_KEY'),
       authDomain: await getSecret('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'),
@@ -54,12 +42,9 @@ export async function GET() {
 
     return NextResponse.json(config);
   } catch (error) {
-    console.error('Debug - Error in GET handler:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error fetching configuration:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to fetch configuration',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Failed to fetch configuration' },
       { status: 500 }
     );
   }
