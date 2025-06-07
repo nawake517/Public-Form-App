@@ -19,18 +19,19 @@ async function getSecret(secretName: string): Promise<string> {
   if (process.env.FIREBASE_CONFIG) {
     try {
       const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
-      if (firebaseConfig.projectId) {
-        projectId = firebaseConfig.projectId;
-      }
+      projectId = firebaseConfig.projectId;
     } catch (e) {
-      // パースエラーはログに出力するが、処理は継続
-      console.error('Error parsing FIREBASE_CONFIG in production:', e instanceof Error ? e.message : 'Unknown error');
+      const isDevelopment = process.env.NODE_ENV !== 'production';
+      if (isDevelopment) {
+        console.error('Error parsing FIREBASE_CONFIG:', e instanceof Error ? e.message : 'Unknown error');
+      }
+      throw new Error('Invalid FIREBASE_CONFIG');
     }
   }
 
   // プロジェクトIDが取得できない場合はエラー
   if (!projectId) {
-    throw new Error('Project ID is not available in the production environment. Check FIREBASE_CONFIG.');
+    throw new Error('Project ID not available');
   }
 
   try {
@@ -38,14 +39,15 @@ async function getSecret(secretName: string): Promise<string> {
     const [version] = await client.accessSecretVersion({ name });
 
     if (!version.payload?.data) {
-      throw new Error(`No data found for secret: ${secretName}`);
+      throw new Error(`Secret not found: ${secretName}`);
     }
     return version.payload.data.toString();
   } catch (error) {
-    // Secret Managerへのアクセスエラーは詳細をログに出力
-    console.error(`Failed to access secret ${secretName} from Secret Manager:`, error);
-    // クライアントには一般的なエラーメッセージを返す
-    throw new Error(`Failed to access secret: ${secretName}`);
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    if (isDevelopment) {
+      console.error(`Secret Manager error for ${secretName}:`, error);
+    }
+    throw new Error('Failed to access secret');
   }
 }
 
@@ -62,14 +64,12 @@ export async function GET() {
 
     return NextResponse.json(config);
   } catch (error) {
-    // 全体的な設定取得エラーは詳細をログに出力
-    console.error('Error fetching Firebase configuration:', error);
-    // クライアントには一般的なエラーメッセージを返す
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    if (isDevelopment) {
+      console.error('Configuration error:', error);
+    }
     return NextResponse.json(
-      {
-        error: 'Failed to fetch configuration',
-        details: 'Internal server error'
-      },
+      { error: 'Failed to fetch configuration' },
       { status: 500 }
     );
   }
