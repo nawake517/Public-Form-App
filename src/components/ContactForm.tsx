@@ -3,6 +3,22 @@
 import { useState } from 'react';
 import type { FormData, FormErrors } from '@/app/page';
 
+// サービスごとの選択肢の定義
+const SERVICE_OPTIONS = {
+  'サービスA': {
+    categories: ['カテゴリー1', 'カテゴリー2', 'カテゴリー3'],
+    plans: ['プランa', 'プランb', 'プランc']
+  },
+  'サービスB': {
+    categories: ['カテゴリー4', 'カテゴリー5', 'カテゴリー6'],
+    plans: ['プランd', 'プランe', 'プランf']
+  },
+  'サービスC': {
+    categories: ['カテゴリー7', 'カテゴリー8', 'カテゴリー9'],
+    plans: ['プランg', 'プランh', 'プランi']
+  }
+};
+
 interface ContactFormProps {
   onSubmit: (data: FormData) => void;
   initialData: FormData;
@@ -11,6 +27,19 @@ interface ContactFormProps {
 export default function ContactForm({ onSubmit, initialData }: ContactFormProps) {
   const [formData, setFormData] = useState<FormData>(initialData);
   const [errors, setErrors] = useState<FormErrors>({});
+
+  // サービス変更時の処理
+  const handleServiceChange = (service: string) => {
+    setFormData({
+      ...formData,
+      service,
+      category: '',
+      plans: []
+    });
+  };
+
+  // 現在選択されているサービスのオプションを取得
+  const currentServiceOptions = formData.service ? SERVICE_OPTIONS[formData.service as keyof typeof SERVICE_OPTIONS] : null;
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -33,12 +62,10 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
       newErrors.category = 'カテゴリーは必須項目です';
     }
 
-    if (formData.plans.length === 0) {
-      newErrors.plans = 'プランを1つ以上選択してください';
-    }
-
     if (!formData.message.trim()) {
       newErrors.message = 'お問い合わせ内容は必須項目です';
+    } else if (formData.message.length > 100) {
+      newErrors.message = 'お問い合わせ内容は100文字以内で入力してください';
     }
 
     setErrors(newErrors);
@@ -99,10 +126,12 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
         <select
           className="form-select"
           value={formData.service}
-          onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+          onChange={(e) => handleServiceChange(e.target.value)}
         >
           <option value="">選択してください</option>
-          <option value="サービスA">サービスA</option>
+          {Object.keys(SERVICE_OPTIONS).map((service) => (
+            <option key={service} value={service}>{service}</option>
+          ))}
         </select>
         {errors.service && <div className="error-message">{errors.service}</div>}
       </div>
@@ -113,36 +142,18 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
           <span className="required">必須</span>
         </label>
         <div className="radio-group">
-          <label className="radio-label">
-            <input
-              type="radio"
-              name="category"
-              value="カテゴリー1"
-              checked={formData.category === 'カテゴリー1'}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            />
-            カテゴリー1
-          </label>
-          <label className="radio-label">
-            <input
-              type="radio"
-              name="category"
-              value="カテゴリー2"
-              checked={formData.category === 'カテゴリー2'}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            />
-            カテゴリー2
-          </label>
-          <label className="radio-label">
-            <input
-              type="radio"
-              name="category"
-              value="カテゴリー3"
-              checked={formData.category === 'カテゴリー3'}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            />
-            カテゴリー3
-          </label>
+          {currentServiceOptions?.categories.map((category) => (
+            <label key={category} className="radio-label">
+              <input
+                type="radio"
+                name="category"
+                value={category}
+                checked={formData.category === category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              />
+              {category}
+            </label>
+          ))}
         </div>
         {errors.category && <div className="error-message">{errors.category}</div>}
       </div>
@@ -150,33 +161,18 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
       <div className="form-group">
         <label className="form-label">
           プラン
-          <span className="required">必須</span>
         </label>
         <div className="checkbox-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.plans.includes('プランa')}
-              onChange={() => handlePlanChange('プランa')}
-            />
-            プランa
-          </label>
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.plans.includes('プランb')}
-              onChange={() => handlePlanChange('プランb')}
-            />
-            プランb
-          </label>
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.plans.includes('プランc')}
-              onChange={() => handlePlanChange('プランc')}
-            />
-            プランc
-          </label>
+          {currentServiceOptions?.plans.map((plan) => (
+            <label key={plan} className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.plans.includes(plan)}
+                onChange={() => handlePlanChange(plan)}
+              />
+              {plan}
+            </label>
+          ))}
         </div>
         {errors.plans && <div className="error-message">{errors.plans}</div>}
       </div>
@@ -185,11 +181,13 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
         <label className="form-label">
           お問い合わせ内容
           <span className="required">必須</span>
+          <span className="character-limit">（100文字以内）</span>
         </label>
         <textarea
           className="textarea"
           value={formData.message}
           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+          maxLength={100}
         />
         {errors.message && <div className="error-message">{errors.message}</div>}
       </div>

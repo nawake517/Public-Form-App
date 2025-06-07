@@ -43,7 +43,22 @@ export default function Home() {
 
   const handleConfirm = async () => {
     try {
+      // Firestoreにデータを保存
       await saveContactForm(formData);
+
+      // メール送信
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send email');
+      }
+
       setStep('complete');
     } catch (error) {
       setError('送信に失敗しました。もう一度お試しください。');

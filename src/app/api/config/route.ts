@@ -54,12 +54,18 @@ async function getSecret(secretName: string): Promise<string> {
 export async function GET() {
   try {
     const config = {
-      apiKey: await getSecret('NEXT_PUBLIC_FIREBASE_API_KEY'),
-      authDomain: await getSecret('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'),
-      projectId: await getSecret('NEXT_PUBLIC_FIREBASE_PROJECT_ID'),
-      storageBucket: await getSecret('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'),
-      messagingSenderId: await getSecret('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
-      appId: await getSecret('NEXT_PUBLIC_FIREBASE_APP_ID'),
+      firebase: {
+        apiKey: await getSecret('NEXT_PUBLIC_FIREBASE_API_KEY'),
+        authDomain: await getSecret('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'),
+        projectId: await getSecret('NEXT_PUBLIC_FIREBASE_PROJECT_ID'),
+        storageBucket: await getSecret('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'),
+        messagingSenderId: await getSecret('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
+        appId: await getSecret('NEXT_PUBLIC_FIREBASE_APP_ID'),
+      },
+      email: {
+        user: await getSecret('GMAIL_USER'),
+        password: await getSecret('GMAIL_APP_PASSWORD'),
+      }
     };
 
     return NextResponse.json(config);
