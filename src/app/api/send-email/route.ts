@@ -1,45 +1,67 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import type { FormData } from '@/app/page';
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
-// メール送信用のトランスポーター設定を動的に作成する関数
-async function createTransporter() {
-  // 開発環境では.env.localから設定を取得
+const client = new SecretManagerServiceClient();
+
+async function getEmailSecret(secretName: string): Promise<string> {
+  // 開発環境では.env.localから取得
   if (process.env.NODE_ENV === 'development') {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
-    });
+    const value = process.env[secretName];
+    if (!value) {
+      throw new Error(`Environment variable ${secretName} is not set in development environment.`);
+    }
+    return value;
   }
 
-  // 本番環境ではSecret Managerから設定を取得
-  try {
-    const response = await fetch('/api/config');
-    if (!response.ok) {
-      throw new Error('Failed to fetch email configuration');
-    }
-    const config = await response.json();
+  // 本番環境ではFirebase設定からプロジェクトIDを取得
+  let projectId: string | undefined;
 
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: config.email.user,
-        pass: config.email.password,
-      },
-    });
+  if (process.env.FIREBASE_CONFIG) {
+    try {
+      const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
+      projectId = firebaseConfig.projectId;
+    } catch (e) {
+      console.error('Error parsing FIREBASE_CONFIG:', e);
+      throw new Error('Failed to get project ID');
+    }
+  }
+
+  if (!projectId) {
+    throw new Error('Project ID not available');
+  }
+
+  try {
+    const name = `projects/${projectId}/secrets/${secretName}/versions/latest`;
+    const [version] = await client.accessSecretVersion({ name });
+
+    if (!version.payload?.data) {
+      throw new Error(`Secret not found: ${secretName}`);
+    }
+    return version.payload.data.toString();
   } catch (error) {
-    console.error('Error creating mail transporter:', error);
-    throw new Error('Failed to initialize email service');
+    console.error(`Error accessing secret ${secretName}:`, error);
+    throw new Error('Failed to access email configuration');
   }
 }
 
 export async function POST(request: Request) {
   try {
     const formData: FormData = await request.json();
-    const transporter = await createTransporter();
+
+    // メール設定を取得
+    const emailUser = await getEmailSecret('GMAIL_USER');
+    const emailPassword = await getEmailSecret('GMAIL_APP_PASSWORD');
+
+    // トランスポーターの作成
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPassword,
+      },
+    });
 
     // メール本文の作成
     const mailBody = `
@@ -66,9 +88,7 @@ ${formData.message}
 
     // メール送信オプションの設定
     const mailOptions = {
-      from: process.env.NODE_ENV === 'development' 
-        ? process.env.GMAIL_USER 
-        : (await (await fetch('/api/config')).json()).email.user,
+      from: emailUser,
       to: 'naoki130517@gmail.com',
       subject: '【お問い合わせ】新規のお問い合わせ',
       text: mailBody,
