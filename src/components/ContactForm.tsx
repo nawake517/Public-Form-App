@@ -88,7 +88,7 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
 
   return (
     <form onSubmit={handleSubmit}>
-      <h1>お問い合わせフォーム</h1>
+      <h1>こちらは○○に関するお問い合わせフォームです。</h1>
       
       <div className="form-group">
         <label className="form-label">

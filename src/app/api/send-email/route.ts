@@ -18,7 +18,7 @@ async function getEmailSecret(secretName: string): Promise<string> {
   try {
     const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG || '');
     projectId = firebaseConfig.projectId;
-  } catch (e) {
+  } catch {
     throw new Error('Failed to get project ID');
   }
 
