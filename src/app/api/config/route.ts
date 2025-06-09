@@ -4,7 +4,6 @@ import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 const client = new SecretManagerServiceClient();
 
 async function getSecret(secretName: string): Promise<string> {
-  // 開発環境では.env.localから取得
   if (process.env.NODE_ENV === 'development') {
     const value = process.env[secretName];
     if (!value) {
@@ -13,18 +12,13 @@ async function getSecret(secretName: string): Promise<string> {
     return value;
   }
 
-  // 本番環境でのプロジェクトIDの取得 (FIREBASE_CONFIGからパース)
   let projectId: string | undefined;
 
   if (process.env.FIREBASE_CONFIG) {
     try {
       const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
       projectId = firebaseConfig.projectId;
-    } catch (e) {
-      const isDevelopment = process.env.NODE_ENV !== 'production';
-      if (isDevelopment) {
-        console.error('Error parsing FIREBASE_CONFIG:', e instanceof Error ? e.message : 'Unknown error');
-      }
+    } catch {
       throw new Error('Invalid FIREBASE_CONFIG');
     }
   }
@@ -39,14 +33,10 @@ async function getSecret(secretName: string): Promise<string> {
     const [version] = await client.accessSecretVersion({ name });
 
     if (!version.payload?.data) {
-      throw new Error(`Secret not found: ${secretName}`);
+      throw new Error('Secret not found');
     }
     return version.payload.data.toString();
-  } catch (error) {
-    const isDevelopment = process.env.NODE_ENV !== 'production';
-    if (isDevelopment) {
-      console.error(`Secret Manager error for ${secretName}:`, error);
-    }
+  } catch {
     throw new Error('Failed to access secret');
   }
 }
@@ -63,11 +53,7 @@ export async function GET() {
     };
 
     return NextResponse.json(config);
-  } catch (error) {
-    const isDevelopment = process.env.NODE_ENV !== 'production';
-    if (isDevelopment) {
-      console.error('Configuration error:', error);
-    }
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch configuration' },
       { status: 500 }
