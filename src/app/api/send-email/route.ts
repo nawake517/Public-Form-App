@@ -22,7 +22,8 @@ async function getEmailSecret(secretName: string): Promise<string> {
     try {
       const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
       projectId = firebaseConfig.projectId;
-    } catch {
+    } catch (e) {
+      console.error('Error parsing FIREBASE_CONFIG:', e);
       throw new Error('Failed to get project ID');
     }
   }
@@ -39,7 +40,8 @@ async function getEmailSecret(secretName: string): Promise<string> {
       throw new Error('Secret not found');
     }
     return version.payload.data.toString();
-  } catch {
+  } catch (error) {
+    console.error('Error accessing secret:', error);
     throw new Error('Failed to access email configuration');
   }
 }
@@ -83,7 +85,7 @@ ${formData.message}
 
     const mailOptions = {
       from: emailUser,
-      to: await getEmailSecret('NOTIFICATION_EMAIL'),
+      to: 'naoki130517@gmail.com', // 一時的に直接指定に戻す
       subject: '【お問い合わせ】新規のお問い合わせ',
       text: mailBody,
     };
@@ -91,7 +93,9 @@ ${formData.message}
     await transporter.sendMail(mailOptions);
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    // エラーログを残しつつ、詳細は本番環境では表示しない
+    console.error('Error sending email:', error);
     return NextResponse.json(
       { error: 'Failed to send email' },
       { status: 500 }
