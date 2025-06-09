@@ -20,7 +20,7 @@ export default function ConfirmationPage({
     setIsSubmitting(true);
     try {
       await onConfirm();
-    } catch (error) {
+    } catch {
       setIsSubmitting(false);
     }
   };

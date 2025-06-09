@@ -39,9 +39,6 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
     }));
   };
 
-  // 現在選択されているサービスのオプションを取得
-  const currentServiceOptions = formData.service ? SERVICE_OPTIONS[formData.service as keyof typeof SERVICE_OPTIONS] : null;
-
   const validateForm = () => {
     const newErrors: FormErrors = {};
 
