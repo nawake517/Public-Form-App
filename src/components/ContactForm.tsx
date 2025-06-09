@@ -29,13 +29,14 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
   const [errors, setErrors] = useState<FormErrors>({});
 
   // サービス変更時の処理
-  const handleServiceChange = (service: string) => {
-    setFormData({
-      ...formData,
+  const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const service = e.target.value;
+    setFormData(prev => ({
+      ...prev,
       service,
       category: '',
       plans: []
-    });
+    }));
   };
 
   // 現在選択されているサービスのオプションを取得
@@ -69,6 +70,16 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
     }
 
     setErrors(newErrors);
+
+    // エラーがある場合、最初のエラー項目までスクロール
+    if (Object.keys(newErrors).length > 0) {
+      const firstErrorField = Object.keys(newErrors)[0];
+      const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -86,117 +97,182 @@ export default function ContactForm({ onSubmit, initialData }: ContactFormProps)
     setFormData({ ...formData, plans: newPlans });
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // カテゴリーが選択された場合、エラーメッセージを消す
+    if (name === 'category' && value) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.category;
+        return newErrors;
+      });
+    }
+  };
+
+  const handleFocus = (name: string) => {
+    if (errors[name as keyof FormErrors]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name as keyof FormErrors];
+        return newErrors;
+      });
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit}>
-      <h1>こちらは○○に関するお問い合わせフォームです。</h1>
+    <div>
+      <p className="form-title">こちらは○○に関するお問い合わせフォームです。</p>
       
-      <div className="form-group">
-        <label className="form-label">
-          氏名
-          <span className="required">必須</span>
-        </label>
-        <input
-          type="text"
-          className="form-input"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        />
-        {errors.name && <div className="error-message">{errors.name}</div>}
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">
-          メールアドレス
-          <span className="required">必須</span>
-        </label>
-        <input
-          type="email"
-          className="form-input"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-        />
-        {errors.email && <div className="error-message">{errors.email}</div>}
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">
-          サービス
-          <span className="required">必須</span>
-        </label>
-        <select
-          className="form-select"
-          value={formData.service}
-          onChange={(e) => handleServiceChange(e.target.value)}
-        >
-          <option value="">選択してください</option>
-          {Object.keys(SERVICE_OPTIONS).map((service) => (
-            <option key={service} value={service}>{service}</option>
-          ))}
-        </select>
-        {errors.service && <div className="error-message">{errors.service}</div>}
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">
-          カテゴリー
-          <span className="required">必須</span>
-        </label>
-        <div className="radio-group">
-          {currentServiceOptions?.categories.map((category) => (
-            <label key={category} className="radio-label">
-              <input
-                type="radio"
-                name="category"
-                value={category}
-                checked={formData.category === category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              />
-              {category}
-            </label>
-          ))}
+      <div className="form-container">
+        <div className="form-group">
+          <label className="form-label">
+            氏名
+            <span className="required">必須</span>
+          </label>
+          <input
+            type="text"
+            className="form-input"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            onFocus={() => handleFocus('name')}
+            placeholder="山田 太郎"
+          />
+          {errors.name && <div className="error-message">{errors.name}</div>}
         </div>
-        {errors.category && <div className="error-message">{errors.category}</div>}
-      </div>
 
-      <div className="form-group">
-        <label className="form-label">
-          プラン
-        </label>
-        <div className="checkbox-group">
-          {currentServiceOptions?.plans.map((plan) => (
-            <label key={plan} className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.plans.includes(plan)}
-                onChange={() => handlePlanChange(plan)}
-              />
-              {plan}
-            </label>
-          ))}
+        <div className="form-group">
+          <label className="form-label">
+            メールアドレス
+            <span className="required">必須</span>
+          </label>
+          <input
+            type="email"
+            className="form-input"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            onFocus={() => handleFocus('email')}
+            placeholder="mail@example.com"
+          />
+          {errors.email && <div className="error-message">{errors.email}</div>}
         </div>
-        {errors.plans && <div className="error-message">{errors.plans}</div>}
-      </div>
 
-      <div className="form-group">
-        <label className="form-label">
-          お問い合わせ内容
-          <span className="required">必須</span>
-          <span className="character-limit">（100文字以内）</span>
-        </label>
-        <textarea
-          className="textarea"
-          value={formData.message}
-          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-          maxLength={100}
-        />
-        {errors.message && <div className="error-message">{errors.message}</div>}
+        <div className="form-group">
+          <label className="form-label">
+            サービス
+            <span className="required">必須</span>
+          </label>
+          <select
+            className="form-select"
+            name="service"
+            value={formData.service}
+            onChange={handleServiceChange}
+            onFocus={() => handleFocus('service')}
+          >
+            <option value="" className="placeholder-option">選択してください</option>
+            {Object.keys(SERVICE_OPTIONS).map((service) => (
+              <option key={service} value={service}>{service}</option>
+            ))}
+          </select>
+          {errors.service && <div className="error-message">{errors.service}</div>}
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">
+            カテゴリー
+            <span className="required">必須</span>
+          </label>
+          <div className={`radio-group ${!formData.service ? 'disabled' : ''}`}>
+            {formData.service 
+              ? SERVICE_OPTIONS[formData.service as keyof typeof SERVICE_OPTIONS].categories.map((category) => (
+                  <label key={category} className="radio-label">
+                    <input
+                      type="radio"
+                      name="category"
+                      value={category}
+                      checked={formData.category === category}
+                      onChange={handleChange}
+                      onFocus={() => handleFocus('category')}
+                      disabled={!formData.service}
+                    />
+                    {category}
+                  </label>
+                ))
+              : SERVICE_OPTIONS['サービスA'].categories.map((category) => (
+                  <label key={category} className="radio-label">
+                    <input
+                      type="radio"
+                      name="category"
+                      value={category}
+                      checked={formData.category === category}
+                      onChange={handleChange}
+                      onFocus={() => handleFocus('category')}
+                      disabled={true}
+                    />
+                    {category}
+                  </label>
+                ))
+            }
+          </div>
+          {errors.category && <div className="error-message">{errors.category}</div>}
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">プラン</label>
+          <div className={`checkbox-group ${!formData.service ? 'disabled' : ''}`}>
+            {formData.service 
+              ? SERVICE_OPTIONS[formData.service as keyof typeof SERVICE_OPTIONS].plans.map((plan) => (
+                  <label key={plan} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={formData.plans.includes(plan)}
+                      onChange={() => handlePlanChange(plan)}
+                      disabled={!formData.service}
+                    />
+                    {plan}
+                  </label>
+                ))
+              : SERVICE_OPTIONS['サービスA'].plans.map((plan) => (
+                  <label key={plan} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={formData.plans.includes(plan)}
+                      onChange={() => handlePlanChange(plan)}
+                      disabled={true}
+                    />
+                    {plan}
+                  </label>
+                ))
+            }
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">
+            お問い合わせ内容
+            <span className="required">必須</span>
+          </label>
+          <textarea
+            className="textarea"
+            name="message"
+            value={formData.message}
+            onChange={handleChange}
+            onFocus={() => handleFocus('message')}
+            maxLength={100}
+            placeholder="お問い合わせ内容をご記入ください。"
+          />
+          {errors.message && <div className="error-message">{errors.message}</div>}
+        </div>
       </div>
 
       <div className="button-group">
-        <button type="submit" className="button button-primary">
+        <button type="submit" className="button button-primary" onClick={handleSubmit}>
           確認画面へ進む
         </button>
       </div>
-    </form>
+    </div>
   );
 } 

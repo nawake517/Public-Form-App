@@ -26,14 +26,15 @@ export type FormErrors = {
 
 export default function Home() {
   const [step, setStep] = useState<'form' | 'confirm' | 'complete'>('form');
-  const [formData, setFormData] = useState<FormData>({
+  const initialFormData: FormData = {
     name: '',
     email: '',
     service: '',
     category: '',
     plans: [],
-    message: '',
-  });
+    message: ''
+  };
+  const [formData, setFormData] = useState<FormData>(initialFormData);
   const [error, setError] = useState<string>('');
 
   const handleFormSubmit = (data: FormData) => {
@@ -63,6 +64,7 @@ export default function Home() {
     } catch (error) {
       setError('送信に失敗しました。もう一度お試しください。');
       console.error('Error submitting form:', error);
+      throw error;
     }
   };
 
