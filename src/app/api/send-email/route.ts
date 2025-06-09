@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
     await transporter.sendMail({
       from: emailUser,
-      to: 'naoki130517@gmail.com',
+      to: emailUser,
       subject: '【お問い合わせ】新規のお問い合わせ',
       text: `
 お問い合わせがありました。
