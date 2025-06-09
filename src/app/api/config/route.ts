@@ -7,37 +7,30 @@ async function getSecret(secretName: string): Promise<string> {
   if (process.env.NODE_ENV === 'development') {
     const value = process.env[secretName];
     if (!value) {
-      throw new Error(`Environment variable ${secretName} is not set in development environment.`);
+      throw new Error(`Environment variable ${secretName} is not set`);
     }
     return value;
   }
 
   let projectId: string | undefined;
-
-  if (process.env.FIREBASE_CONFIG) {
-    try {
-      const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
-      projectId = firebaseConfig.projectId;
-    } catch {
-      throw new Error('Invalid FIREBASE_CONFIG');
-    }
+  try {
+    const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG || '');
+    projectId = firebaseConfig.projectId;
+  } catch {
+    throw new Error('Failed to get project ID');
   }
 
-  // プロジェクトIDが取得できない場合はエラー
   if (!projectId) {
     throw new Error('Project ID not available');
   }
 
   try {
-    const name = `projects/${projectId}/secrets/${secretName}/versions/latest`;
-    const [version] = await client.accessSecretVersion({ name });
-
-    if (!version.payload?.data) {
-      throw new Error('Secret not found');
-    }
-    return version.payload.data.toString();
+    const [version] = await client.accessSecretVersion({
+      name: `projects/${projectId}/secrets/${secretName}/versions/latest`
+    });
+    return version.payload?.data?.toString() || '';
   } catch {
-    throw new Error('Failed to access secret');
+    throw new Error('Failed to access configuration');
   }
 }
 

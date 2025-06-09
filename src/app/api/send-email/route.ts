@@ -6,26 +6,20 @@ import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 const client = new SecretManagerServiceClient();
 
 async function getEmailSecret(secretName: string): Promise<string> {
-  // 開発環境では.env.localから取得
   if (process.env.NODE_ENV === 'development') {
     const value = process.env[secretName];
     if (!value) {
-      throw new Error(`Environment variable ${secretName} is not set in development environment.`);
+      throw new Error(`Environment variable ${secretName} is not set`);
     }
     return value;
   }
 
-  // 本番環境ではFirebase設定からプロジェクトIDを取得
   let projectId: string | undefined;
-
-  if (process.env.FIREBASE_CONFIG) {
-    try {
-      const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
-      projectId = firebaseConfig.projectId;
-    } catch (e) {
-      console.error('Error parsing FIREBASE_CONFIG:', e);
-      throw new Error('Failed to get project ID');
-    }
+  try {
+    const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG || '');
+    projectId = firebaseConfig.projectId;
+  } catch (e) {
+    throw new Error('Failed to get project ID');
   }
 
   if (!projectId) {
@@ -33,35 +27,34 @@ async function getEmailSecret(secretName: string): Promise<string> {
   }
 
   try {
-    const name = `projects/${projectId}/secrets/${secretName}/versions/latest`;
-    const [version] = await client.accessSecretVersion({ name });
-
-    if (!version.payload?.data) {
-      throw new Error('Secret not found');
-    }
-    return version.payload.data.toString();
+    const [version] = await client.accessSecretVersion({
+      name: `projects/${projectId}/secrets/${secretName}/versions/latest`
+    });
+    return version.payload?.data?.toString() || '';
   } catch (error) {
     console.error('Error accessing secret:', error);
-    throw new Error('Failed to access email configuration');
+    throw new Error('Failed to access configuration');
   }
 }
 
 export async function POST(request: Request) {
   try {
     const formData: FormData = await request.json();
-
-    const emailUser = await getEmailSecret('GMAIL_USER');
-    const emailPassword = await getEmailSecret('GMAIL_APP_PASSWORD');
+    const [emailUser, emailPassword] = await Promise.all([
+      getEmailSecret('GMAIL_USER'),
+      getEmailSecret('GMAIL_APP_PASSWORD')
+    ]);
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: {
-        user: emailUser,
-        pass: emailPassword,
-      },
+      auth: { user: emailUser, pass: emailPassword }
     });
 
-    const mailBody = `
+    await transporter.sendMail({
+      from: emailUser,
+      to: 'naoki130517@gmail.com',
+      subject: '【お問い合わせ】新規のお問い合わせ',
+      text: `
 お問い合わせがありました。
 
 ■ 氏名
@@ -81,20 +74,11 @@ ${formData.plans.join('・')}
 
 ■ お問い合わせ内容
 ${formData.message}
-    `;
-
-    const mailOptions = {
-      from: emailUser,
-      to: 'naoki130517@gmail.com', // 一時的に直接指定に戻す
-      subject: '【お問い合わせ】新規のお問い合わせ',
-      text: mailBody,
-    };
-
-    await transporter.sendMail(mailOptions);
+      `.trim()
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    // エラーログを残しつつ、詳細は本番環境では表示しない
     console.error('Error sending email:', error);
     return NextResponse.json(
       { error: 'Failed to send email' },
