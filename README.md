@@ -2,7 +2,7 @@
 
 フレームワークを組み合わせた、お問い合わせフォームのWebアプリケーションです。
 
-なお、修正版+スクラッチ化をしたものはこちら↓  
+なお、デザイン修正+スクラッチ化をしたものはこちら↓  
 [https://github.com/nawake517/Public-Form-Scratch](https://github.com/nawake517/Public-Form-Scratch)
 
 ## アクセスURL
